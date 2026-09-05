@@ -26,6 +26,7 @@ jobs:
           ref: ${{ env.GEYSER_REF }}
           path: geyser-source
           fetch-depth: 1
+          submodules: recursive
 
       - name: Patch no-Xbox login
         working-directory: geyser-source
@@ -55,7 +56,7 @@ jobs:
           replace_exact(
               'core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java',
               '''            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, xuid, issuedAt, extraData.minecraftId));''',
-              '''            // In no-Xbox mode, the Bedrock identity claims may not contain a gamertag or XUID.\n            // Fall back to the client-provided ThirdPartyName and a deterministic synthetic XUID.\n            String displayName = extraData.displayName;\n            if (displayName == null || displayName.isBlank()) {\n                displayName = data.getUsername();\n            }\n            if (displayName == null || displayName.isBlank()) {\n                displayName = "BedrockPlayer";\n            }\n\n            if (xuid == null || xuid.isBlank()) {\n                xuid = "offline-" + extraData.identity;\n            }\n\n            session.setAuthData(new AuthData(displayName, extraData.identity, xuid, issuedAt, extraData.minecraftId));'''
+              '''            // In no-Xbox mode, use the Bedrock client's ThirdPartyName when the identity has no gamertag.\n            String displayName = extraData.displayName;\n            if (displayName == null || displayName.isBlank()) {\n                displayName = data.getUsername();\n            }\n            if (displayName == null || displayName.isBlank()) {\n                displayName = "BedrockPlayer";\n            }\n\n            // Never pass a null XUID into the session manager. Use a deterministic synthetic value.\n            if (xuid == null || xuid.isBlank()) {\n                xuid = "offline-" + extraData.identity;\n            }\n\n            session.setAuthData(new AuthData(displayName, extraData.identity, xuid, issuedAt, extraData.minecraftId));'''
           )
 
       - name: Set up Java
@@ -65,15 +66,18 @@ jobs:
           java-version: '25'
           cache: gradle
 
-      - name: Build Geyser-Spigot
+      - name: Build Geyser
         working-directory: geyser-source
-        run: ./gradlew :bootstrap:spigot:build --no-daemon
+        run: ./gradlew build --no-daemon
 
-      - name: Copy patched JAR
+      - name: Locate and copy patched Spigot JAR
         shell: bash
         run: |
-          cp geyser-source/bootstrap/spigot/build/libs/Geyser-Spigot.jar ./Geyser-Spigot-no-xbox.jar
-          sha256sum ./Geyser-Spigot-no-xbox.jar | tee ./Geyser-Spigot-no-xbox.jar.sha256
+          set -euo pipefail
+          JAR=$(find geyser-source/bootstrap -type f -path '*/build/libs/Geyser-Spigot.jar' -print -quit)
+          test -n "$JAR"
+          cp "$JAR" Geyser-Spigot-no-xbox.jar
+          sha256sum Geyser-Spigot-no-xbox.jar | tee Geyser-Spigot-no-xbox.jar.sha256
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
