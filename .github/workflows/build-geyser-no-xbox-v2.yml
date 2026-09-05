@@ -1,0 +1,95 @@
+name: Build Patched Geyser (No Xbox) v2
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-geyser-no-xbox-v2.yml'
+
+permissions:
+  contents: write
+
+env:
+  GEYSER_REF: 9b65a39fc1b37f35655c0b2ab0196e231bc37b4e
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Checkout exact Geyser source
+        uses: actions/checkout@v4
+        with:
+          repository: GeyserMC/Geyser
+          ref: ${{ env.GEYSER_REF }}
+          path: geyser-source
+          fetch-depth: 1
+          submodules: recursive
+
+      - name: Patch no-Xbox login
+        working-directory: geyser-source
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def patch(path, old, new):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              if old not in s:
+                  raise SystemExit(f'Patch target not found: {path}')
+              p.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          patch(
+              'core/src/main/java/org/geysermc/geyser/session/SessionManager.java',
+              '''    public boolean isXuidAlreadyPending(String xuid) {\n        for (GeyserSession session : pendingSessions) {\n            if (session.xuid().equals(xuid)) {\n                return true;\n            }\n        }\n        return false;\n    }\n\n    public @Nullable GeyserSession sessionByXuid(@NonNull String xuid) {\n        Objects.requireNonNull(xuid);\n        for (GeyserSession session : sessions.values()) {\n            if (session.xuid().equals(xuid)) {\n                return session;\n            }\n        }\n        return null;\n    }''',
+              '''    public boolean isXuidAlreadyPending(@Nullable String xuid) {\n        if (xuid == null || xuid.isBlank()) {\n            return false;\n        }\n        for (GeyserSession session : pendingSessions) {\n            if (xuid.equals(session.xuid())) {\n                return true;\n            }\n        }\n        return false;\n    }\n\n    public @Nullable GeyserSession sessionByXuid(@Nullable String xuid) {\n        if (xuid == null || xuid.isBlank()) {\n            return null;\n        }\n        for (GeyserSession session : sessions.values()) {\n            if (xuid.equals(session.xuid())) {\n                return session;\n            }\n        }\n        return null;\n    }'''
+          )
+
+          patch(
+              'core/src/main/java/org/geysermc/geyser/network/UpstreamPacketHandler.java',
+              '''        if (geyser.getSessionManager().isXuidAlreadyPending(session.xuid()) || geyser.getSessionManager().sessionByXuid(session.xuid()) != null) {''',
+              '''        if (session.xuid() != null && !session.xuid().isBlank() &&\n            (geyser.getSessionManager().isXuidAlreadyPending(session.xuid()) || geyser.getSessionManager().sessionByXuid(session.xuid()) != null)) {'''
+          )
+
+          patch(
+              'core/src/main/java/org/geysermc/geyser/util/LoginEncryptionUtils.java',
+              '''            session.setAuthData(new AuthData(extraData.displayName, extraData.identity, xuid, issuedAt, extraData.minecraftId));''',
+              '''            String displayName = extraData.displayName;\n            if (displayName == null || displayName.isBlank()) {\n                displayName = data.getUsername();\n            }\n            if (displayName == null || displayName.isBlank()) {\n                displayName = "BedrockPlayer";\n            }\n            if (xuid == null || xuid.isBlank()) {\n                xuid = "offline-" + extraData.identity;\n            }\n            session.setAuthData(new AuthData(displayName, extraData.identity, xuid, issuedAt, extraData.minecraftId));'''
+          )
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+
+      - name: Build Spigot target
+        working-directory: geyser-source
+        run: ./gradlew :spigot:build --no-daemon
+
+      - name: Copy patched JAR
+        run: |
+          set -euo pipefail
+          test -f geyser-source/bootstrap/spigot/build/libs/Geyser-Spigot.jar
+          cp geyser-source/bootstrap/spigot/build/libs/Geyser-Spigot.jar jar/Geyser-Spigot-no-xbox.jar
+          sha256sum jar/Geyser-Spigot-no-xbox.jar | tee jar/Geyser-Spigot-no-xbox.jar.sha256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Geyser-Spigot-no-xbox
+          path: |
+            jar/Geyser-Spigot-no-xbox.jar
+            jar/Geyser-Spigot-no-xbox.jar.sha256
+          retention-days: 30
+
+      - name: Commit patched JAR
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add jar/Geyser-Spigot-no-xbox.jar jar/Geyser-Spigot-no-xbox.jar.sha256
+          git commit -m 'Build patched Geyser-Spigot without Xbox auth' || exit 0
+          git push
