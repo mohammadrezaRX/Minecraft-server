@@ -1,0 +1,5 @@
+Manifest-Version: 1.0
+Main-Class: org.geysermc.geyser.platform.spigot.GeyserSpigotMain
+paperweight-mappings-namespace: mojang
+Multi-Release: true
+

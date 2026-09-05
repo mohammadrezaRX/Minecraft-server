@@ -1,0 +1,8 @@
+org.geysermc.geyser.translator.sound.block.HoeInteractionTranslator
+org.geysermc.geyser.translator.sound.block.FlintAndSteelInteractionTranslator
+org.geysermc.geyser.translator.sound.block.ComparatorSoundInteractionTranslator
+org.geysermc.geyser.translator.sound.block.OpenableSoundInteractionTranslator
+org.geysermc.geyser.translator.sound.block.ButtonSoundInteractionTranslator
+org.geysermc.geyser.translator.sound.block.GrassPathInteractionTranslator
+org.geysermc.geyser.translator.sound.block.BucketSoundInteractionTranslator
+org.geysermc.geyser.translator.sound.block.LeverSoundInteractionTranslator

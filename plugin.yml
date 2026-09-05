@@ -1,0 +1,8 @@
+main: org.geysermc.geyser.platform.spigot.GeyserSpigotPlugin
+name: Geyser-Spigot
+author: GeyserMC
+website: https://geysermc.org
+version: 2.11.2-SNAPSHOT
+softdepend: ["ViaVersion", "floodgate"]
+api-version: 1.13
+folia-supported: true

@@ -1,0 +1,11 @@
+org.geysermc.geyser.translator.collision.fixes.LanternCollision
+org.geysermc.geyser.translator.collision.fixes.ConduitCollision
+org.geysermc.geyser.translator.collision.SolidCollision
+org.geysermc.geyser.translator.collision.fixes.EndPortalCollision
+org.geysermc.geyser.translator.collision.fixes.SeaPickleCollision
+org.geysermc.geyser.translator.collision.fixes.ChestCollision
+org.geysermc.geyser.translator.collision.fixes.BellCollision
+org.geysermc.geyser.translator.collision.fixes.GlassPaneAndIronBarsCollision
+org.geysermc.geyser.translator.collision.fixes.ScaffoldingCollision
+org.geysermc.geyser.translator.collision.fixes.DoorCollision
+org.geysermc.geyser.translator.collision.fixes.TrapdoorCollision
