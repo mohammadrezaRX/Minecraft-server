@@ -2,7 +2,7 @@ name: Build Word project
 
 on:
   push:
-    branches: [word-version]
+    branches: [word-version, main]
     paths:
       - 'word_src/build_docx.py'
 
