@@ -1,0 +1,37 @@
+name: Build Word project
+
+on:
+  push:
+    branches: [word-version]
+    paths:
+      - 'word_src/build_docx.py'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install python-docx
+        run: pip install python-docx
+
+      - name: Build DOCX
+        run: python word_src/build_docx.py
+
+      - name: Commit DOCX
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "word/انقلاب_دنیای_دیجیتال_نسخه_نمونه.docx"
+          git diff --cached --quiet && exit 0
+          git commit -m "Build Word project"
+          git push
